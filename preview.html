@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmergWatch - Preview</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #efefef;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+        #root {
+            min-height: 100vh;
+        }
+        .logo-triangle {
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-bottom: 36px solid #d73c2f;
+            transform: rotate(180deg);
+        }
+        .logo-circle {
+            background: #d73c2f;
+            color: white;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-left: -3px;
+            margin-top: -4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-flex;
+            height: 48px;
+            width: 96px;
+            align-items: center;
+            border-radius: 24px;
+            padding: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .toggle-switch.on {
+            background: #181a1d;
+        }
+        .toggle-switch.off {
+            background: #c9c9c9;
+        }
+        .toggle-switch-dot {
+            position: absolute;
+            height: 40px;
+            width: 40px;
+            border-radius: 20px;
+            background: white;
+            transition: transform 0.3s;
+        }
+        .toggle-switch.on .toggle-switch-dot {
+            transform: translateX(48px);
+        }
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        input::placeholder {
+            color: #8d8d8d;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        const { useState } = React;
+
+        function Logo() {
+            return (
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className="logo-triangle"></div>
+                    <div className="logo-circle">E</div>
+                </div>
+            );
+        }
+
+        function MessageBubble({ message }) {
+            const isSent = message.from === 'self';
+            return isSent ? (
+                <div style={{
+                    marginLeft: 'auto',
+                    maxWidth: '760px',
+                    borderRadius: '26px',
+                    backgroundColor: '#d73c2f',
+                    color: 'white',
+                    padding: '24px',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}>
+                    <div style={{ fontSize: '2.4rem', fontWeight: '600', lineHeight: '1.4' }}>
+                        {message.text}
+                    </div>
+                    <div style={{ marginTop: '16px', fontSize: '1.4rem', color: '#f7d3d0' }}>
+                        {message.timestamp}
+                    </div>
+                </div>
+            ) : (
+                <div style={{
+                    maxWidth: '700px',
+                    borderRadius: '18px',
+                    backgroundColor: '#eceae9',
+                    border: '1px solid #d9d3d2',
+                    color: '#2d2d2d',
+                    padding: '20px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}>
+                    <div style={{ fontSize: '2.2rem', fontWeight: '500', lineHeight: '1.4', color: '#202020' }}>
+                        {message.text}
+                    </div>
+                    <div style={{ marginTop: '16px', fontSize: '1.5rem', color: '#5b5b5b' }}>
+                        {message.timestamp}
+                    </div>
+                </div>
+            );
+        }
+
+        function RecordingCard({ recording, onReset }) {
+            return (
+                <div style={{
+                    borderRadius: '20px',
+                    border: '1px solid #e9c8c5',
+                    backgroundColor: '#f7f1f1',
+                    padding: '24px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                }}>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                        <button style={{
+                            backgroundColor: '#e9d0ce',
+                            border: 'none',
+                            borderRadius: '14px',
+                            width: '70px',
+                            height: '70px',
+                            flexShrink: 0,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                        }} onMouseOver={(e) => e.target.style.backgroundColor = '#ddc0bc'} onMouseOut={(e) => e.target.style.backgroundColor = '#e9d0ce'}>
+                            <lucide.Play size={32} fill="#d73c2f" color="#d73c2f" />
+                        </button>
+
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '2rem', fontWeight: '500', color: '#2b2a2a' }}>
+                                    {recording.date}
+                                </div>
+                                {recording.status && (
+                                    <span style={{
+                                        borderRadius: '8px',
+                                        backgroundColor: '#f8d8d5',
+                                        color: '#d73c2f',
+                                        padding: '4px 12px',
+                                        fontSize: '1.1rem',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {recording.status}
+                                    </span>
+                                )}
+                                {recording.badge && (
+                                    <span style={{
+                                        borderRadius: '8px',
+                                        backgroundColor: '#f6e7ac',
+                                        color: '#7a6222',
+                                        padding: '4px 12px',
+                                        fontSize: '1.1rem',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {recording.badge}
+                                    </span>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '1.7rem', color: '#4c4a4a', marginTop: '8px' }}>
+                                <span style={{ color: '#d73c2f' }}>◉</span>
+                                <span>Unknown</span>
+                            </div>
+
+                            <div style={{ marginTop: '16px', fontSize: '1.7rem', color: '#4e4a4a', lineHeight: '1.4' }}>
+                                {recording.summary}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                        {recording.actions.includes('play') && (
+                            <button style={{
+                                borderRadius: '14px',
+                                border: '1px solid #e7c7c4',
+                                backgroundColor: '#f5efef',
+                                color: '#d73c2f',
+                                height: '72px',
+                                fontSize: '2rem',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }} onMouseOver={(e) => e.target.style.backgroundColor = '#ede7e7'} onMouseOut={(e) => e.target.style.backgroundColor = '#f5efef'}>
+                                <lucide.Play size={24} fill="#d73c2f" />
+                                Play
+                            </button>
+                        )}
+
+                        {recording.actions.includes('send') && (
+                            <button style={{
+                                borderRadius: '14px',
+                                border: '1px solid #e7c7c4',
+                                backgroundColor: '#f5efef',
+                                color: '#d73c2f',
+                                height: '72px',
+                                fontSize: '1.5rem',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }} onMouseOver={(e) => e.target.style.backgroundColor = '#ede7e7'} onMouseOut={(e) => e.target.style.backgroundColor = '#f5efef'}>
+                                <lucide.Send size={24} />
+                                <span style={{ display: 'none' }}>Send</span>
+                                Send
+                            </button>
+                        )}
+
+                        {recording.actions.includes('reset') && (
+                            <button onClick={onReset} style={{
+                                borderRadius: '14px',
+                                border: '1px solid #e7c7c4',
+                                backgroundColor: '#f5efef',
+                                color: '#d73c2f',
+                                height: '72px',
+                                fontSize: '2rem',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }} onMouseOver={(e) => e.target.style.backgroundColor = '#ede7e7'} onMouseOut={(e) => e.target.style.backgroundColor = '#f5efef'}>
+                                <lucide.RefreshCcw size={24} />
+                                Reset Options
+                            </button>
+                        )}
+
+                        {recording.actions.includes('delete') && (
+                            <button style={{
+                                borderRadius: '14px',
+                                border: '1px solid #e7c7c4',
+                                backgroundColor: '#f5efef',
+                                color: '#d73c2f',
+                                height: '72px',
+                                fontSize: '2rem',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }} onMouseOver={(e) => e.target.style.backgroundColor = '#ede7e7'} onMouseOut={(e) => e.target.style.backgroundColor = '#f5efef'}>
+                                <lucide.Trash2 size={24} />
+                                Delete
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function ResetOptionsModal({ onClose }) {
+            const [toggles, setToggles] = useState([true, false, false, false, false, false]);
+
+            const options = [
+                'Send this video to EmergWatcher with the selected options.',
+                'Permit Civil Authorities to access this video',
+                'Permit Civil Authorities to access the AI description of this video',
+                'Permit Civil Authorities to search the AI description using search terms',
+                'Permit Civil Authorities to search the recorded location of this video',
+                'Permit Civil Authorities to search the recorded time/date of this video',
+            ];
+
+            const handleToggle = (index) => {
+                const newToggles = [...toggles];
+                newToggles[index] = !newToggles[index];
+                setToggles(newToggles);
+            };
+
+            return (
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '24px',
+                    zIndex: 50
+                }}>
+                    <div style={{
+                        width: '100%',
+                        maxWidth: '980px',
+                        borderRadius: '22px',
+                        backgroundColor: '#f6f3f3',
+                        border: '1px solid #e6d5d2',
+                        padding: '24px',
+                        boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+                        maxHeight: '90vh',
+                        overflowY: 'auto'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#d73c2f', fontSize: '2.4rem', fontWeight: 'bold' }}>
+                                <lucide.RefreshCcw size={32} />
+                                Reset Options
+                            </div>
+                            <button onClick={onClose} style={{
+                                color: '#353535',
+                                background: 'none',
+                                border: 'none',
+                                fontSize: '24px',
+                                cursor: 'pointer',
+                                padding: 0
+                            }}>
+                                ✕
+                            </button>
+                        </div>
+
+                        <p style={{ fontSize: '1.7rem', color: '#4c4a4a', marginBottom: '24px' }}>
+                            Adjust the options for this recording, then activate to resend it to EmergWatcher.
+                        </p>
+
+                        <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {options.map((option, idx) => (
+                                <div key={idx} style={{
+                                    borderRadius: '16px',
+                                    border: '1px solid #e9c8c4',
+                                    backgroundColor: '#f7f2f1',
+                                    padding: '24px 20px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '24px',
+                                    transition: 'all 0.2s'
+                                }} onMouseOver={(e) => e.style.backgroundColor = '#f9f5f4'} onMouseOut={(e) => e.style.backgroundColor = '#f7f2f1'}>
+                                    <div style={{ fontSize: '2rem', color: '#2f2f2f', lineHeight: '1.4' }}>
+                                        {option}
+                                    </div>
+                                    <button
+                                        onClick={() => handleToggle(idx)}
+                                        className={`toggle-switch ${toggles[idx] ? 'on' : 'off'}`}
+                                        style={{ flexShrink: 0 }}
+                                    >
+                                        <div className="toggle-switch-dot"></div>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', borderTop: '1px solid #e6d5d2', paddingTop: '24px' }}>
+                            <button onClick={onClose} style={{
+                                borderRadius: '14px',
+                                backgroundColor: 'white',
+                                border: '1px solid #d7d7d7',
+                                color: '#2f2f2f',
+                                height: '72px',
+                                minWidth: '180px',
+                                fontSize: '2rem',
+                                fontWeight: '500',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }} onMouseOver={(e) => e.style.backgroundColor = '#f5f5f5'} onMouseOut={(e) => e.style.backgroundColor = 'white'}>
+                                Cancel
+                            </button>
+                            <button onClick={onClose} style={{
+                                borderRadius: '14px',
+                                backgroundColor: '#d73c2f',
+                                color: 'white',
+                                height: '72px',
+                                minWidth: '220px',
+                                fontSize: '2rem',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '12px',
+                                cursor: 'pointer',
+                                border: 'none',
+                                transition: 'all 0.2s'
+                            }} onMouseOver={(e) => e.style.backgroundColor = '#c92d25'} onMouseOut={(e) => e.style.backgroundColor = '#d73c2f'}>
+                                <lucide.Send size={24} />
+                                Activate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [screen, setScreen] = useState('login');
+            const [resetOpen, setResetOpen] = useState(false);
+            const [messages, setMessages] = useState([
+                { id: 1, from: 'other', text: 'Test message 7 EmergWatcher to EmergWatch Sept 30 108 am', timestamp: 'Sep 30 • 5:10 AM' },
+                { id: 2, from: 'self', text: 'Test message 8 EmergWatch to EmergWatcher Sept 30 111 am', timestamp: 'Sep 30 • 5:11 AM • delivered' },
+            ]);
+            const [messageInput, setMessageInput] = useState('');
+            const [recordingTime, setRecordingTime] = useState(11);
+
+            const recordings = [
+                { id: 1, date: 'Sep 30, 2026 • 4:19 PM', status: 'SENT', summary: 'No AI summary available.', actions: ['play', 'delete'] },
+                { id: 2, date: 'Sep 30, 2026 • 4:16 PM', status: 'SAVED', summary: 'The image shows a camera disabled icon against a solid black background, indicating that no video feed is currently available.', actions: ['play', 'send', 'reset'] },
+                { id: 3, date: 'Sep 20, 2026 • 5:42 PM', status: 'SENT', badge: 'RECORD RESET', summary: 'No AI summary available.', actions: ['play', 'reset', 'delete'] },
+            ];
+
+            const handleSendMessage = () => {
+                if (messageInput.trim()) {
+                    setMessages([...messages, { id: messages.length + 1, from: 'self', text: messageInput, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+                    setMessageInput('');
+                }
+            };
+
+            const ActionTile = ({ icon: Icon, label, onClick }) => (
+                <button onClick={onClick} style={{
+                    width: '100%',
+                    borderRadius: '18px',
+                    border: '1px solid #d75d4d',
+                    backgroundColor: '#f9f3f2',
+                    color: '#d73c2f',
+                    height: '88px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '16px',
+                    fontSize: '2.1rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                }} onMouseOver={(e) => e.style.backgroundColor = '#f3e8e8'} onMouseOut={(e) => e.style.backgroundColor = '#f9f3f2'}>
+                    <Icon size={28} />
+                    <span>{label}</span>
+                </button>
+            );
+
+            return (
+                <div style={{ minHeight: '100vh', backgroundColor: '#efefef', color: '#2b2a2a' }}>
+                    {screen === 'login' && (
+                        <div style={{ minHeight: '100vh', backgroundColor: '#efefef', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '32px' }}>
+                            <div style={{ width: '100%', maxWidth: '900px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '32px' }}>
+                                    <Logo />
+                                    <div style={{ fontSize: '3rem', fontWeight: 'black', letterSpacing: '-0.02em', color: '#d73c2f' }}>
+                                        EmergSystems
+                                    </div>
+                                </div>
+
+                                <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+                                    <div style={{ fontSize: '4rem', fontWeight: 'black', letterSpacing: '-0.02em', color: '#d73c2f', lineHeight: 1 }}>
+                                        : EmergWatch
+                                    </div>
+                                    <div style={{ marginTop: '12px', color: '#4b4b4b', fontSize: '1.8rem', fontStyle: 'italic', fontWeight: 300 }}>
+                                        Record, analyze, and share what you see — instantly.
+                                    </div>
+                                </div>
+
+                                <div style={{ maxWidth: '620px', margin: '0 auto' }}>
+                                    <h1 style={{ textAlign: 'center', fontSize: '4rem', fontWeight: 'black', lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 0 }}>
+                                        Welcome back
+                                    </h1>
+                                    <p style={{ textAlign: 'center', fontSize: '2rem', color: '#5d5d5d', marginTop: '12px', marginBottom: '32px' }}>
+                                        Log in to your account
+                                    </p>
+
+                                    <div style={{ borderRadius: '22px', border: '1px solid #d8d8d8', backgroundColor: '#f3f2f2', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                                        <button style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '16px',
+                                            border: '1px solid #d7d7d7',
+                                            backgroundColor: 'white',
+                                            borderRadius: '12px',
+                                            height: '72px',
+                                            fontSize: '1.9rem',
+                                            fontWeight: '500',
+                                            color: '#2f2f2f',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }} onMouseOver={(e) => e.style.backgroundColor = '#faf8f8'} onMouseOut={(e) => e.style.backgroundColor = 'white'}>
+                                            Continue with Google
+                                        </button>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0' }}>
+                                            <div style={{ flex: 1, borderTop: '1px solid #d3d3d3' }} />
+                                            <div style={{ padding: '0 16px', fontSize: '1.3rem', color: '#8a8a8a' }}>OR</div>
+                                            <div style={{ flex: 1, borderTop: '1px solid #d3d3d3' }} />
+                                        </div>
+
+                                        <div style={{ marginBottom: '24px' }}>
+                                            <label style={{ display: 'block', fontSize: '1.5rem', fontWeight: '500', color: '#212121', marginBottom: '8px' }}>
+                                                Email
+                                            </label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #d3d3d3', borderRadius: '12px', backgroundColor: 'white', height: '62px', padding: '0 16px' }}>
+                                                <lucide.Mail size={24} color="#8d8d8d" />
+                                                <input type="email" defaultValue="you@example.com" style={{ flex: 1, backgroundColor: 'transparent', fontSize: '1.5rem', outline: 'none', border: 'none' }} />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ marginBottom: '24px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                <label style={{ fontSize: '1.5rem', fontWeight: '500', color: '#212121' }}>
+                                                    Password
+                                                </label>
+                                                <button style={{ fontSize: '1.3rem', color: '#d63d2f', fontWeight: '500', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                                    Forgot password?
+                                                </button>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid #d3d3d3', borderRadius: '12px', backgroundColor: 'white', height: '62px', padding: '0 16px' }}>
+                                                <lucide.Lock size={24} color="#8d8d8d" />
+                                                <input type="password" defaultValue="password" style={{ flex: 1, backgroundColor: 'transparent', fontSize: '1.5rem', outline: 'none', border: 'none' }} />
+                                            </div>
+                                        </div>
+
+                                        <button onClick={() => setScreen('dashboard')} style={{
+                                            marginTop: '24px',
+                                            width: '100%',
+                                            borderRadius: '12px',
+                                            backgroundColor: '#2f2d2d',
+                                            color: 'white',
+                                            height: '72px',
+                                            fontSize: '2rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            border: 'none',
+                                            transition: 'all 0.2s'
+                                        }} onMouseOver={(e) => e.style.backgroundColor = '#1d1d1d'} onMouseOut={(e) => e.style.backgroundColor = '#2f2d2d'}>
+                                            Log in
+                                        </button>
+                                    </div>
+
+                                    <div style={{ textAlign: 'center', fontSize: '1.6rem', color: '#4a4a4a', marginTop: '32px' }}>
+                                        Don't have an account? <button style={{ color: '#d63d2f', fontWeight: '600', background: 'none', border: 'none', cursor: 'pointer' }}>Create one</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'dashboard' && (
+                        <div style={{ minHeight: '100vh', backgroundColor: '#efefef', padding: '40px 16px' }}>
+                            <div style={{ margin: '0 auto', maxWidth: '760px' }}>
+                                <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginBottom: '12px' }}>
+                                        <Logo />
+                                        <div style={{ fontSize: '3rem', fontWeight: 'black', letterSpacing: '-0.02em', color: '#d73c2f' }}>
+                                            EmergSystems
+                                        </div>
+                                    </div>
+
+                                    <div style={{ fontSize: '3rem', fontWeight: 'black', letterSpacing: '-0.02em', color: '#d73c2f' }}>
+                                        : EmergWatch
+                                    </div>
+
+                                    <p style={{ marginTop: '12px', fontSize: '1.8rem', color: '#4f4a4a', fontStyle: 'italic', fontWeight: 300 }}>
+                                        Record, analyze, and share what you see — instantly.
+                                    </p>
+                                </div>
+
+                                <button onClick={() => setScreen('recording')} style={{
+                                    width: '100%',
+                                    borderRadius: '22px',
+                                    backgroundColor: '#d73c2f',
+                                    color: 'white',
+                                    height: '120px',
+                                    fontSize: '2.6rem',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                    transition: 'all 0.2s',
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '16px',
+                                    marginBottom: '40px'
+                                }} onMouseOver={(e) => e.style.backgroundColor = '#c92d25'} onMouseOut={(e) => e.style.backgroundColor = '#d73c2f'}>
+                                    <lucide.Camera size={36} />
+                                    Record Video
+                                </button>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <ActionTile icon={lucide.Settings} label="Configure" onClick={() => {}} />
+                                    <ActionTile icon={lucide.Film} label="Recordings" onClick={() => setScreen('recordings')} />
+                                    <ActionTile icon={lucide.MessageSquareText} label="Messages" onClick={() => setScreen('messages')} />
+                                    <ActionTile icon={lucide.LogOut} label="Logout" onClick={() => setScreen('login')} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'messages' && (
+                        <div style={{ minHeight: '100vh', backgroundColor: '#efefef', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ maxWidth: '1080px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #d3d3d3', padding: '20px 8px' }}>
+                                    <button onClick={() => setScreen('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#d73c2f', fontSize: '1.8rem', fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                        <lucide.ChevronLeft size={28} />
+                                        Back to Recording Screen
+                                    </button>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#d73c2f', fontSize: '3rem', fontWeight: 'black', letterSpacing: '-0.02em' }}>
+                                        <lucide.MessageSquareText size={40} />
+                                        Messages
+                                    </div>
+                                </div>
+
+                                <div style={{ flex: 1, maxWidth: '980px', width: '100%', margin: '0 auto', padding: '48px 0', overflowY: 'auto' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+                                        {messages.map((msg) => (
+                                            <MessageBubble key={msg.id} message={msg} />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div style={{ maxWidth: '980px', width: '100%', margin: '0 auto', borderTop: '1px solid #d4d4d4', paddingTop: '32px', paddingBottom: '40px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderRadius: '18px', border: '1px solid #d9d9d9', backgroundColor: '#f5f2f2', padding: '16px 20px' }}>
+                                        <input
+                                            value={messageInput}
+                                            onChange={(e) => setMessageInput(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                                            placeholder="Type a message..."
+                                            style={{ flex: 1, backgroundColor: 'transparent', fontSize: '1.8rem', color: '#2a2a2a', outline: 'none', border: 'none' }}
+                                        />
+                                        <button onClick={handleSendMessage} style={{
+                                            borderRadius: '14px',
+                                            backgroundColor: '#e8c7c2',
+                                            color: '#d73c2f',
+                                            height: '60px',
+                                            width: '150px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '12px',
+                                            fontSize: '1.8rem',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            border: 'none',
+                                            transition: 'all 0.2s'
+                                        }} onMouseOver={(e) => e.style.backgroundColor = '#ddb5af'} onMouseOut={(e) => e.style.backgroundColor = '#e8c7c2'}>
+                                            <lucide.Send size={24} />
+                                            Send
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'recordings' && (
+                        <div style={{ minHeight: '100vh', backgroundColor: '#efefef', padding: '0 16px' }}>
+                            <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #d3d3d3', padding: '20px 8px' }}>
+                                    <button onClick={() => setScreen('dashboard')} style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#d73c2f', fontSize: '1.8rem', fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                        <lucide.ChevronLeft size={28} />
+                                        Back to Recording Screen
+                                    </button>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#d73c2f', fontSize: '3rem', fontWeight: 'black', letterSpacing: '-0.02em' }}>
+                                        <lucide.Film size={40} />
+                                        Recordings
+                                    </div>
+                                </div>
+
+                                <div style={{ maxWidth: '980px', margin: '0 auto', paddingTop: '40px', paddingBottom: '40px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                    {recordings.map((recording) => (
+                                        <RecordingCard
+                                            key={recording.id}
+                                            recording={recording}
+                                            onReset={() => setResetOpen(true)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'recording' && (
+                        <div style={{ minHeight: '100vh', backgroundColor: '#0b0d11', color: 'white', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', borderBottom: '1px solid #333' }}>
+                                <button onClick={() => setScreen('dashboard')} style={{
+                                    borderRadius: '12px',
+                                    backgroundColor: '#d73c2f',
+                                    color: 'white',
+                                    padding: '12px 20px',
+                                    fontSize: '1.6rem',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    transition: 'all 0.2s'
+                                }} onMouseOver={(e) => e.style.backgroundColor = '#c92d25'} onMouseOut={(e) => e.style.backgroundColor = '#d73c2f'}>
+                                    <lucide.ChevronLeft size={24} />
+                                    Cancel
+                                </button>
+
+                                <div style={{ textAlign: 'center', fontSize: '1.3rem', color: '#f7d5d1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                                    <span className="pulse" style={{ width: '12px', height: '12px', backgroundColor: '#d73c2f', borderRadius: '50%' }} />
+                                    <span style={{ fontFamily: 'monospace', fontSize: '2.1rem' }}>00:{String(recordingTime).padStart(2, '0')}</span>
+                                </div>
+                            </div>
+
+                            <div style={{ flex: 1, position: 'relative', padding: '32px', backgroundColor: '#020303' }}>
+                                <div style={{ position: 'absolute', inset: 0, backgroundColor: '#020303' }} />
+                                <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <lucide.EyeOff size={220} strokeWidth={1.5} color="white" style={{ opacity: 0.4 }} />
+                                </div>
+
+                                <div style={{ position: 'absolute', bottom: '24px', left: '32px', right: '32px', zIndex: 20 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', fontSize: '1.7rem', color: '#f4f4f4', marginBottom: '16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span style={{ fontFamily: 'monospace', fontSize: '1.9rem' }}>0:09</span>
+                                            <span>/</span>
+                                            <span style={{ fontFamily: 'monospace', fontSize: '1.9rem' }}>7:06</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                            <button style={{ background: 'none', border: 'none', color: '#f4f4f4', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={(e) => e.style.color = '#d73c2f'} onMouseOut={(e) => e.style.color = '#f4f4f4'}>
+                                                <lucide.Volume2 size={32} />
+                                            </button>
+                                            <button style={{ background: 'none', border: 'none', color: '#f4f4f4', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={(e) => e.style.color = '#d73c2f'} onMouseOut={(e) => e.style.color = '#f4f4f4'}>
+                                                <lucide.Video size={32} />
+                                            </button>
+                                            <button style={{ background: 'none', border: 'none', color: '#f4f4f4', cursor: 'pointer', fontSize: '24px', transition: 'all 0.2s' }} onMouseOver={(e) => e.style.color = '#d73c2f'} onMouseOut={(e) => e.style.color = '#f4f4f4'}>
+                                                ⋮
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ height: '4px', width: '100%', backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: '2px', cursor: 'pointer' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ padding: '32px' }}>
+                                <div style={{ textAlign: 'center', fontSize: '1.5rem', color: '#f7d3d0', marginBottom: '24px' }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ width: '20px', height: '20px', border: '1px solid rgba(255,255,255,0.6)', borderRadius: '50%', display: 'inline-block' }} />
+                                        <span>Transcribing audio...</span>
+                                    </div>
+                                    <div style={{ marginTop: '12px', fontSize: '1.6rem', color: '#f1f1f1' }}>
+                                        Recording complete. Save it with AI analysis, or send to EmergWatcher.
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', maxWidth: '1100px', margin: '0 auto', marginBottom: '24px' }}>
+                                    <button onClick={() => setScreen('recordings')} style={{
+                                        borderRadius: '18px',
+                                        backgroundColor: '#d73c2f',
+                                        color: 'white',
+                                        height: '90px',
+                                        fontSize: '2.4rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '16px',
+                                        cursor: 'pointer',
+                                        border: 'none',
+                                        transition: 'all 0.2s'
+                                    }} onMouseOver={(e) => e.style.backgroundColor = '#c92d25'} onMouseOut={(e) => e.style.backgroundColor = '#d73c2f'}>
+                                        <lucide.Send size={28} />
+                                        Send to EmergWatcher
+                                    </button>
+
+                                    <button onClick={() => setScreen('recordings')} style={{
+                                        borderRadius: '18px',
+                                        backgroundColor: '#1fbf67',
+                                        color: 'white',
+                                        height: '90px',
+                                        fontSize: '2.4rem',
+                                        fontWeight: 'bold',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '16px',
+                                        cursor: 'pointer',
+                                        border: 'none',
+                                        transition: 'all 0.2s'
+                                    }} onMouseOver={(e) => e.style.backgroundColor = '#18a858'} onMouseOut={(e) => e.style.backgroundColor = '#1fbf67'}>
+                                        <lucide.Film size={28} />
+                                        Save Recording
+                                    </button>
+                                </div>
+
+                                <div style={{ textAlign: 'center' }}>
+                                    <button style={{ color: '#d73c2f', fontSize: '1.6rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '12px', margin: '0 auto', background: 'none', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={(e) => e.style.color = '#c92d25'} onMouseOut={(e) => e.style.color = '#d73c2f'}>
+                                        <lucide.Trash2 size={20} />
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {resetOpen && <ResetOptionsModal onClose={() => setResetOpen(false)} />}
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
